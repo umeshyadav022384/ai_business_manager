@@ -1,0 +1,28 @@
+# --- Python / Backend ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.pytest_cache/
+backend/.env
+
+# --- Node / Frontend ---
+node_modules/
+dist/
+.vite/
+frontend/.env
+
+# --- Env files (never commit secrets) ---
+.env
+*.env.local
+
+# --- Docker ---
+postgres_data/
+
+# --- OS / Editor ---
+.DS_Store
+.idea/
+.vscode/
+*.log

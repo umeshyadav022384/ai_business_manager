@@ -1,0 +1,22 @@
+services:
+  db:
+    image: postgres:16
+    container_name: ai-business-manager-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-abm_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-abm_password}
+      POSTGRES_DB: ${POSTGRES_DB:-ai_business_manager}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
+
+# Phase 1 note:
+# Only PostgreSQL is containerized here. The frontend (Vite) and backend
+# (Uvicorn) run directly on the host during Phase 1 for faster iteration.
+# Once the core system is functionally proven, this file will be extended
+# with `backend` and `frontend` services for full containerization.
