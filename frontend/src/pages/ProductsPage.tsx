@@ -1,50 +1,56 @@
-import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Package, Plus, Pencil, Trash2, Search, X } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { deleteProduct, listProducts } from "../api/products";
+import type { ProductDto } from "../api/products";
+import { getStockStatus, getTotalStock, STOCK_STATUS_LABEL } from "../lib/stock";
+import type { StockStatus } from "../lib/stock";
+import Button from "../components/ui/Button";
+import Input from "../components/ui/Input";
+import Select from "../components/ui/Select";
+import Badge from "../components/ui/Badge";
+import EmptyState from "../components/ui/EmptyState";
+import ProductFormModal from "../components/products/ProductFormModal";
 import {
-  createProduct,
-  deleteProduct,
-  listProducts,
-  updateVariantStock,
-} from "../api/products";
-import type { ProductDto, ProductVariantCreatePayload } from "../api/products";
+  default as Table,
+  TableHead,
+  TableHeaderCell,
+  TableBody,
+  TableRow,
+  TableCell,
+  TableState,
+} from "../components/ui/Table";
 
-/**
- * Phase 3 minimal Products page. The create form doesn't branch into
- * "GroceryForm" vs "ClothingForm" components — it's one form that
- * shows a variants sub-section only when the current business is
- * clothing. Grocery submits with an empty variants array, and the
- * backend auto-creates the single default variant (see
- * services/product_service.py).
- */
+const STATUS_BADGE_VARIANT: Record<StockStatus, "success" | "warning" | "danger"> = {
+  in_stock: "success",
+  low_stock: "warning",
+  out_of_stock: "danger",
+};
+
 export default function ProductsPage() {
   const { currentBusiness } = useAuth();
   const isClothing = currentBusiness?.business_type === "clothing";
 
   const [products, setProducts] = useState<ProductDto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const [name, setName] = useState("");
-  const [category, setCategory] = useState("");
-  const [brand, setBrand] = useState("");
-  const [unit, setUnit] = useState("");
-  const [purchasePrice, setPurchasePrice] = useState("");
-  const [sellingPrice, setSellingPrice] = useState("");
-  const [reorderLevel, setReorderLevel] = useState("");
-  const [variants, setVariants] = useState<ProductVariantCreatePayload[]>([
-    { size: "", color: "", stock_quantity: 0 },
-  ]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<ProductDto | undefined>(undefined);
+  const [deletingProduct, setDeletingProduct] = useState<ProductDto | null>(null);
 
   async function loadProducts() {
     setIsLoading(true);
+    setLoadError(null);
     try {
       const data = await listProducts();
       setProducts(data);
-      setError(null);
     } catch {
-      setError("Could not load products.");
+      setLoadError("Could not load products. Check your connection and try again.");
     } finally {
       setIsLoading(false);
     }
@@ -54,351 +60,242 @@ export default function ProductsPage() {
     loadProducts();
   }, []);
 
-  function updateVariantField(
-    index: number,
-    field: keyof ProductVariantCreatePayload,
-    value: string,
-  ) {
-    setVariants((prev) =>
-      prev.map((v, i) =>
-        i === index
-          ? {
-              ...v,
-              [field]: field === "stock_quantity" ? Number(value) : value,
-            }
-          : v,
-      ),
-    );
+  useEffect(() => {
+    if (!successMessage) return;
+    const timer = setTimeout(() => setSuccessMessage(null), 4000);
+    return () => clearTimeout(timer);
+  }, [successMessage]);
+
+  const categories = useMemo(() => {
+    const set = new Set<string>();
+    products.forEach((p) => p.category && set.add(p.category));
+    return Array.from(set).sort();
+  }, [products]);
+
+  const filteredProducts = useMemo(() => {
+    return products.filter((p) => {
+      const matchesSearch =
+        search.trim() === "" ||
+        p.name.toLowerCase().includes(search.trim().toLowerCase()) ||
+        (p.brand ?? "").toLowerCase().includes(search.trim().toLowerCase());
+      const matchesCategory = categoryFilter === "all" || p.category === categoryFilter;
+      return matchesSearch && matchesCategory;
+    });
+  }, [products, search, categoryFilter]);
+
+  function openCreateModal() {
+    setEditingProduct(undefined);
+    setIsModalOpen(true);
   }
 
-  function addVariantRow() {
-    setVariants((prev) => [
-      ...prev,
-      { size: "", color: "", stock_quantity: 0 },
-    ]);
+  function openEditModal(product: ProductDto) {
+    setEditingProduct(product);
+    setIsModalOpen(true);
   }
 
-  function removeVariantRow(index: number) {
-    setVariants((prev) => prev.filter((_, i) => i !== index));
+  function handleSaved(message: string) {
+    setSuccessMessage(message);
+    loadProducts();
   }
 
-  async function handleCreate(event: React.FormEvent) {
-    event.preventDefault();
-    setIsSubmitting(true);
-    setError(null);
+  async function confirmDelete() {
+    if (!deletingProduct) return;
     try {
-      await createProduct({
-        name,
-        category: category || null,
-        brand: brand || null,
-        unit: isClothing ? null : unit || null,
-        purchase_price: Number(purchasePrice),
-        selling_price: Number(sellingPrice),
-        reorder_level: reorderLevel ? Number(reorderLevel) : null,
-        variants: isClothing
-          ? variants
-              .filter((v) => v.size || v.color)
-              .map((v) => ({
-                size: v.size || null,
-                color: v.color || null,
-                stock_quantity: v.stock_quantity,
-              }))
-          : variants.map((v) => ({
-              // ← Send the stock from the form!
-              size: null,
-              color: null,
-              stock_quantity: v.stock_quantity,
-            })),
-      });
-      setName("");
-      setCategory("");
-      setBrand("");
-      setUnit("");
-      setPurchasePrice("");
-      setSellingPrice("");
-      setReorderLevel("");
-      setVariants([{ size: "", color: "", stock_quantity: 0 }]);
+      await deleteProduct(deletingProduct.id);
+      setSuccessMessage(`"${deletingProduct.name}" was deleted.`);
+      setDeletingProduct(null);
       await loadProducts();
     } catch {
-      setError("Could not create product. Check the form values.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
-  async function handleDelete(productId: string) {
-    try {
-      await deleteProduct(productId);
-      await loadProducts();
-    } catch {
-      setError("Could not delete product.");
-    }
-  }
-
-  async function handleStockChange(variantId: string, newValue: string) {
-    const quantity = Number(newValue);
-    if (Number.isNaN(quantity) || quantity < 0) return;
-    try {
-      await updateVariantStock(variantId, quantity);
-      await loadProducts();
-    } catch {
-      setError("Could not update stock.");
+      setLoadError("Could not delete this product.");
+      setDeletingProduct(null);
     }
   }
 
   return (
-    <div
-      style={{
-        padding: "2rem",
-        fontFamily: "sans-serif",
-        maxWidth: 900,
-        margin: "0 auto",
-      }}
-    >
-      <p>
-        <Link to="/">&larr; Back to dashboard</Link>
-      </p>
-      <h1>Products</h1>
-      {currentBusiness && (
-        <p style={{ color: "#555" }}>
-          {currentBusiness.name} ({currentBusiness.business_type})
-        </p>
+    <div className="mx-auto max-w-6xl space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-ink-900">Products</h1>
+          <p className="text-sm text-ink-500">
+            {currentBusiness
+              ? `${currentBusiness.name} · ${currentBusiness.business_type}`
+              : "Manage your inventory"}
+          </p>
+        </div>
+        <Button leftIcon={<Plus className="h-4 w-4" />} onClick={openCreateModal}>
+          Add Product
+        </Button>
+      </div>
+
+      {successMessage && (
+        <div className="flex items-center justify-between rounded-lg bg-success-50 px-4 py-3 text-sm text-success-700">
+          {successMessage}
+          <button onClick={() => setSuccessMessage(null)} aria-label="Dismiss">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
       )}
 
-      {error && <p style={{ color: "red" }}>{error}</p>}
-
-      <h2>Add a Product</h2>
-      <form onSubmit={handleCreate} style={{ marginBottom: "2rem" }}>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: "0.75rem",
-          }}
-        >
-          <label>
-            Name
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              style={{ display: "block", width: "100%", padding: "0.4rem" }}
-            />
-          </label>
-          <label>
-            Category
-            <input
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              style={{ display: "block", width: "100%", padding: "0.4rem" }}
-            />
-          </label>
-          <label>
-            Brand
-            <input
-              value={brand}
-              onChange={(e) => setBrand(e.target.value)}
-              style={{ display: "block", width: "100%", padding: "0.4rem" }}
-            />
-          </label>
-          {!isClothing && (
-            <label>
-              Unit (kg, packet, liter...)
-              <input
-                value={unit}
-                onChange={(e) => setUnit(e.target.value)}
-                style={{ display: "block", width: "100%", padding: "0.4rem" }}
-              />
-            </label>
-          )}
-          <label>
-            Purchase Price
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              value={purchasePrice}
-              onChange={(e) => setPurchasePrice(e.target.value)}
-              required
-              style={{ display: "block", width: "100%", padding: "0.4rem" }}
-            />
-          </label>
-          <label>
-            Selling Price
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              value={sellingPrice}
-              onChange={(e) => setSellingPrice(e.target.value)}
-              required
-              style={{ display: "block", width: "100%", padding: "0.4rem" }}
-            />
-          </label>
-          <label>
-            Reorder Level
-            <input
-              type="number"
-              min="0"
-              value={reorderLevel}
-              onChange={(e) => setReorderLevel(e.target.value)}
-              style={{ display: "block", width: "100%", padding: "0.4rem" }}
-            />
-          </label>
-          {!isClothing && (
-            <label>
-              Initial Stock
-              <input
-                type="number"
-                min="0"
-                value={variants[0]?.stock_quantity ?? 0}
-                onChange={(e) =>
-                  updateVariantField(0, "stock_quantity", e.target.value)
-                }
-                style={{ display: "block", width: "100%", padding: "0.4rem" }}
-              />
-            </label>
-          )}
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <div className="relative flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by name or brand..."
+            className="pl-9"
+          />
         </div>
-
-        {isClothing && (
-          <div style={{ marginTop: "1rem" }}>
-            <h3 style={{ marginBottom: "0.5rem" }}>
-              Variants (size / color / stock)
-            </h3>
-            {variants.map((variant, index) => (
-              <div
-                key={index}
-                style={{
-                  display: "flex",
-                  gap: "0.5rem",
-                  marginBottom: "0.5rem",
-                }}
-              >
-                <input
-                  placeholder="Size (e.g. S, M, L)"
-                  value={variant.size ?? ""}
-                  onChange={(e) =>
-                    updateVariantField(index, "size", e.target.value)
-                  }
-                  style={{ padding: "0.4rem", flex: 1 }}
-                />
-                <input
-                  placeholder="Color"
-                  value={variant.color ?? ""}
-                  onChange={(e) =>
-                    updateVariantField(index, "color", e.target.value)
-                  }
-                  style={{ padding: "0.4rem", flex: 1 }}
-                />
-                <input
-                  type="number"
-                  min="0"
-                  placeholder="Stock"
-                  value={variant.stock_quantity}
-                  onChange={(e) =>
-                    updateVariantField(index, "stock_quantity", e.target.value)
-                  }
-                  style={{ padding: "0.4rem", width: 100 }}
-                />
-                {variants.length > 1 && (
-                  <button type="button" onClick={() => removeVariantRow(index)}>
-                    Remove
-                  </button>
-                )}
-              </div>
-            ))}
-            <button type="button" onClick={addVariantRow}>
-              + Add another variant
-            </button>
-          </div>
-        )}
-
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          style={{ marginTop: "1rem" }}
+        <Select
+          value={categoryFilter}
+          onChange={(e) => setCategoryFilter(e.target.value)}
+          className="sm:w-56"
         >
-          {isSubmitting ? "Saving..." : "Add Product"}
-        </button>
-      </form>
+          <option value="all">All categories</option>
+          {categories.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </Select>
+      </div>
 
-      <h2>Existing Products</h2>
-      {isLoading && <p>Loading...</p>}
-      {!isLoading && products.length === 0 && <p>No products yet.</p>}
+      {loadError && (
+        <EmptyState
+          title="Something went wrong"
+          description={loadError}
+          action={
+            <Button variant="secondary" size="sm" onClick={loadProducts}>
+              Try again
+            </Button>
+          }
+        />
+      )}
 
-      {products.map((product) => (
+      {!loadError && (
+        <Table>
+          <TableHead>
+            <TableHeaderCell>Product</TableHeaderCell>
+            <TableHeaderCell>Category</TableHeaderCell>
+            {isClothing && <TableHeaderCell>Variants</TableHeaderCell>}
+            <TableHeaderCell>Price</TableHeaderCell>
+            <TableHeaderCell>Stock</TableHeaderCell>
+            <TableHeaderCell>Status</TableHeaderCell>
+            <TableHeaderCell className="text-right">Actions</TableHeaderCell>
+          </TableHead>
+          <TableBody>
+            <TableState
+              colSpan={isClothing ? 7 : 6}
+              isLoading={isLoading}
+              isEmpty={!isLoading && filteredProducts.length === 0}
+              emptyTitle={
+                products.length === 0 ? "No products yet" : "No products match your filters"
+              }
+              emptyDescription={
+                products.length === 0
+                  ? "Add your first product to start tracking inventory."
+                  : "Try a different search term or category."
+              }
+              loadingLabel="Loading products..."
+            />
+            {!isLoading &&
+              filteredProducts.map((product) => {
+                const totalStock = getTotalStock(product.variants);
+                const status = getStockStatus(totalStock, product.reorder_level);
+                return (
+                  <TableRow key={product.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-ink-100 text-ink-400">
+                          <Package className="h-4 w-4" />
+                        </span>
+                        <div>
+                          <p className="font-medium text-ink-800">{product.name}</p>
+                          {product.brand && (
+                            <p className="text-xs text-ink-400">{product.brand}</p>
+                          )}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>{product.category ?? "—"}</TableCell>
+                    {isClothing && (
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {product.variants.map((v) => (
+                            <Badge key={v.id} variant="neutral">
+                              {[v.size, v.color].filter(Boolean).join(" / ") || "Default"}:{" "}
+                              {v.stock_quantity}
+                            </Badge>
+                          ))}
+                        </div>
+                      </TableCell>
+                    )}
+                    <TableCell>Rs. {product.selling_price}</TableCell>
+                    <TableCell>{totalStock}</TableCell>
+                    <TableCell>
+                      <Badge variant={STATUS_BADGE_VARIANT[status]}>
+                        {STOCK_STATUS_LABEL[status]}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex justify-end gap-1">
+                        <button
+                          onClick={() => openEditModal(product)}
+                          aria-label={`Edit ${product.name}`}
+                          className="rounded-md p-1.5 text-ink-400 hover:bg-ink-100 hover:text-ink-700"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => setDeletingProduct(product)}
+                          aria-label={`Delete ${product.name}`}
+                          className="rounded-md p-1.5 text-ink-400 hover:bg-danger-50 hover:text-danger-600"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+          </TableBody>
+        </Table>
+      )}
+
+      <ProductFormModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSaved={handleSaved}
+        businessType={currentBusiness?.business_type}
+        product={editingProduct}
+      />
+
+      {deletingProduct && (
         <div
-          key={product.id}
-          style={{
-            border: "1px solid #ddd",
-            borderRadius: 6,
-            padding: "1rem",
-            marginBottom: "1rem",
-          }}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-ink-900/40 p-4"
+          onClick={() => setDeletingProduct(null)}
+          role="presentation"
         >
           <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "start",
-            }}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-sm rounded-xl bg-white p-5 shadow-elevated"
           >
-            <div>
-              <strong>{product.name}</strong>{" "}
-              {product.category && (
-                <span style={{ color: "#777" }}>({product.category})</span>
-              )}
-              <div style={{ color: "#555", fontSize: "0.9rem" }}>
-                Purchase: {product.purchase_price} &middot; Sell:{" "}
-                {product.selling_price}
-                {product.reorder_level !== null && (
-                  <> &middot; Reorder at: {product.reorder_level}</>
-                )}
-              </div>
+            <h2 className="text-base font-semibold text-ink-800">Delete product?</h2>
+            <p className="mt-1 text-sm text-ink-500">
+              This will permanently delete "{deletingProduct.name}" and all of its
+              variants. This cannot be undone.
+            </p>
+            <div className="mt-4 flex justify-end gap-2">
+              <Button variant="secondary" onClick={() => setDeletingProduct(null)}>
+                Cancel
+              </Button>
+              <Button variant="danger" onClick={confirmDelete}>
+                Delete
+              </Button>
             </div>
-            <button onClick={() => handleDelete(product.id)}>Delete</button>
           </div>
-
-          <table
-            style={{
-              width: "100%",
-              marginTop: "0.75rem",
-              borderCollapse: "collapse",
-            }}
-          >
-            <thead>
-              <tr style={{ textAlign: "left", borderBottom: "1px solid #eee" }}>
-                {isClothing && <th>Size</th>}
-                {isClothing && <th>Color</th>}
-                <th>Stock</th>
-              </tr>
-            </thead>
-            <tbody>
-              {product.variants.map((variant) => (
-                <tr
-                  key={variant.id}
-                  style={{ borderBottom: "1px solid #f5f5f5" }}
-                >
-                  {isClothing && <td>{variant.size ?? "-"}</td>}
-                  {isClothing && <td>{variant.color ?? "-"}</td>}
-                  <td>
-                    <input
-                      type="number"
-                      min="0"
-                      defaultValue={variant.stock_quantity}
-                      onBlur={(e) =>
-                        handleStockChange(variant.id, e.target.value)
-                      }
-                      style={{ width: 80, padding: "0.2rem" }}
-                    />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
         </div>
-      ))}
+      )}
     </div>
   );
 }

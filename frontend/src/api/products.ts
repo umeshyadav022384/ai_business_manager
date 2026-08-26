@@ -16,6 +16,12 @@ export interface ProductVariantCreatePayload {
   stock_quantity: number;
 }
 
+export interface ProductVariantUpdatePayload {
+  size?: string | null;
+  color?: string | null;
+  stock_quantity?: number;
+}
+
 export interface ProductDto {
   id: string;
   business_id: string;
@@ -44,6 +50,17 @@ export interface ProductCreatePayload {
   variants?: ProductVariantCreatePayload[];
 }
 
+export interface ProductUpdatePayload {
+  name?: string;
+  category?: string | null;
+  brand?: string | null;
+  unit?: string | null;
+  expiry_date?: string | null;
+  purchase_price?: number;
+  selling_price?: number;
+  reorder_level?: number | null;
+}
+
 export async function listProducts(): Promise<ProductDto[]> {
   const response = await apiClient.get<ProductDto[]>("/api/v1/products");
   return response.data;
@@ -54,17 +71,43 @@ export async function createProduct(payload: ProductCreatePayload): Promise<Prod
   return response.data;
 }
 
+export async function updateProduct(
+  productId: string,
+  payload: ProductUpdatePayload
+): Promise<ProductDto> {
+  const response = await apiClient.put<ProductDto>(
+    `/api/v1/products/${productId}`,
+    payload
+  );
+  return response.data;
+}
+
 export async function deleteProduct(productId: string): Promise<void> {
   await apiClient.delete(`/api/v1/products/${productId}`);
 }
 
-export async function updateVariantStock(
+export async function addVariant(
+  productId: string,
+  payload: ProductVariantCreatePayload
+): Promise<ProductVariantDto> {
+  const response = await apiClient.post<ProductVariantDto>(
+    `/api/v1/products/${productId}/variants`,
+    payload
+  );
+  return response.data;
+}
+
+export async function updateVariant(
   variantId: string,
-  stockQuantity: number
+  payload: ProductVariantUpdatePayload
 ): Promise<ProductVariantDto> {
   const response = await apiClient.put<ProductVariantDto>(
     `/api/v1/products/variants/${variantId}`,
-    { stock_quantity: stockQuantity }
+    payload
   );
   return response.data;
+}
+
+export async function deleteVariant(variantId: string): Promise<void> {
+  await apiClient.delete(`/api/v1/products/variants/${variantId}`);
 }
