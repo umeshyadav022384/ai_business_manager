@@ -7,11 +7,19 @@ import RegisterPage from "./pages/RegisterPage";
 import DashboardPage from "./pages/DashboardPage";
 import HealthCheckPage from "./pages/HealthCheckPage";
 import ProductsPage from "./pages/ProductsPage";
-
+import PurchasesPage from "./pages/PurchasesPage";
+import SuppliersPage from "./pages/SuppliersPage";
+import SalesPage from "./pages/SalesPage";
+import CustomersPage from "./pages/CustomersPage";
+import ExpensesPage from "./pages/ExpensesPage";
+import CustomerUdhaarPage from "./pages/CustomerUdhaarPage";
+import CustomerDetailPage from "./pages/CustomerDetailPage";
+import SupplierPayablesPage from "./pages/SupplierPayablesPage";
+import SupplierDetailPage from "./pages/SupplierDetailPage";
+import ReportsPage from "./pages/ReportsPage";
 /**
- * Protected routes (/, /products, ...) render inside AppLayout, which
- * supplies the Sidebar + Topbar shell via <Outlet />. Public routes
- * (/login, /register, /health) render standalone, with no shell.
+ * Phase 5 adds /sales and /customers (protected, inside AppLayout).
+ * /login, /register, /health stay as they were.
  */
 function App() {
   return (
@@ -31,6 +39,16 @@ function App() {
           >
             <Route path="/" element={<DashboardPage />} />
             <Route path="/products" element={<ProductsPage />} />
+            <Route path="/purchases" element={<PurchasesPage />} />
+            <Route path="/suppliers" element={<SuppliersPage />} />
+            <Route path="/sales" element={<SalesPage />} />
+            <Route path="/customers" element={<CustomersPage />} />
+            <Route path="/expenses" element={<ExpensesPage />} />
+            <Route path="/reports" element={<ReportsPage />} />
+            <Route path="/customer-udhaar/:id" element={<CustomerDetailPage />} />
+            <Route path="/suppliers/:id" element={<SupplierDetailPage />} />
+            <Route path="/customer-udhaar" element={<CustomerUdhaarPage />} />
+            <Route path="/supplier-payables" element={<SupplierPayablesPage />} />
           </Route>
         </Routes>
       </AuthProvider>

@@ -206,89 +206,122 @@ export default function ProductFormModal({
         </>
       }
     >
-      <form id="product-form" onSubmit={handleSubmit} className="space-y-4">
+      <form id="product-form" onSubmit={handleSubmit} className="space-y-6">
+        <p className="text-sm text-ink-500">
+          {isEditMode
+            ? "Update this product's details, pricing, or stock."
+            : "Fill in the details below to add a new product to your inventory."}
+        </p>
+
         {error && (
           <p className="rounded-lg bg-danger-50 px-3 py-2 text-sm text-danger-700">
             {error}
           </p>
         )}
 
-        <Input
-          label="Product Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="e.g. Basmati Rice 5kg"
-          required
-        />
+        <div className="space-y-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-ink-400">
+            Basic Information
+          </p>
 
-        <div className="grid grid-cols-2 gap-3">
           <Input
-            label="Category"
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            placeholder="e.g. Grains"
+            label="Product Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="e.g. Basmati Rice 5kg"
+            required
           />
-          <Input
-            label="Brand"
-            value={brand}
-            onChange={(e) => setBrand(e.target.value)}
-            placeholder="e.g. Kohinoor"
-          />
-        </div>
 
-        {!isClothing && (
           <div className="grid grid-cols-2 gap-3">
             <Input
-              label="Unit"
-              value={unit}
-              onChange={(e) => setUnit(e.target.value)}
-              placeholder="kg, packet, liter..."
-              helperText="How this product is measured or sold"
+              label="Category"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              placeholder="e.g. Grains"
             />
             <Input
-              label="Expiry Date"
-              type="date"
-              value={expiryDate}
-              onChange={(e) => setExpiryDate(e.target.value)}
+              label="Brand"
+              value={brand}
+              onChange={(e) => setBrand(e.target.value)}
+              placeholder="e.g. Kohinoor"
             />
           </div>
-        )}
 
-        <div className="grid grid-cols-2 gap-3">
-          <Input
-            label="Purchase Price"
-            type="number"
-            step="0.01"
-            min="0"
-            value={purchasePrice}
-            onChange={(e) => setPurchasePrice(e.target.value)}
-            required
-          />
-          <Input
-            label="Selling Price"
-            type="number"
-            step="0.01"
-            min="0"
-            value={sellingPrice}
-            onChange={(e) => setSellingPrice(e.target.value)}
-            required
-          />
+          {!isClothing && (
+            <div className="grid grid-cols-2 gap-3">
+              <Input
+                label="Unit"
+                value={unit}
+                onChange={(e) => setUnit(e.target.value)}
+                placeholder="kg, packet, liter..."
+                helperText="How this product is measured or sold"
+              />
+              <Input
+                label="Expiry Date"
+                type="date"
+                value={expiryDate}
+                onChange={(e) => setExpiryDate(e.target.value)}
+              />
+            </div>
+          )}
         </div>
 
-        <Input
-          label="Reorder Level"
-          type="number"
-          min="0"
-          value={reorderLevel}
-          onChange={(e) => setReorderLevel(e.target.value)}
-          helperText="You'll be flagged as low stock at or below this quantity"
-        />
+        <div className="space-y-4 border-t border-ink-100 pt-5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-ink-400">
+            Pricing &amp; Stock
+          </p>
 
-        {isClothing ? (
-          <div>
-            <p className="mb-2 text-sm font-medium text-ink-700">
-              Variants (size / color / stock)
-            </p>
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              label="Purchase Price"
+              type="number"
+              step="0.01"
+              min="0"
+              value={purchasePrice}
+              onChange={(e) => setPurchasePrice(e.target.value)}
+              required
+            />
+            <Input
+              label="Selling Price"
+              type="number"
+              step="0.01"
+              min="0"
+              value={sellingPrice}
+              onChange={(e) => setSellingPrice(e.target.value)}
+              required
+            />
+          </div>
+
+          <Input
+            label="Reorder Level"
+            type="number"
+            min="0"
+            value={reorderLevel}
+            onChange={(e) => setReorderLevel(e.target.value)}
+            helperText="You'll be flagged as low stock at or below this quantity"
+          />
+
+          {!isClothing && (
+            <Input
+              label="Initial Stock"
+              type="number"
+              min="0"
+              value={variantRows[0]?.stock_quantity ?? 0}
+              onChange={(e) => updateVariantRow(0, "stock_quantity", e.target.value)}
+            />
+          )}
+        </div>
+
+        {isClothing && (
+          <div className="space-y-3 border-t border-ink-100 pt-5">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-ink-400">
+                Variants
+              </p>
+              <p className="mt-1 text-xs text-ink-400">
+                Add one row per size/color combination you stock.
+              </p>
+            </div>
             <div className="space-y-2">
               {variantRows.map((row, index) => (
                 <div key={index} className="flex items-center gap-2">
@@ -331,19 +364,10 @@ export default function ProductFormModal({
               size="sm"
               leftIcon={<Plus className="h-4 w-4" />}
               onClick={addVariantRow}
-              className="mt-2"
             >
               Add variant
             </Button>
           </div>
-        ) : (
-          <Input
-            label="Stock Quantity"
-            type="number"
-            min="0"
-            value={variantRows[0]?.stock_quantity ?? 0}
-            onChange={(e) => updateVariantRow(0, "stock_quantity", e.target.value)}
-          />
         )}
       </form>
     </Modal>

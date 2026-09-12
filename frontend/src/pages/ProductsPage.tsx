@@ -10,6 +10,7 @@ import Input from "../components/ui/Input";
 import Select from "../components/ui/Select";
 import Badge from "../components/ui/Badge";
 import EmptyState from "../components/ui/EmptyState";
+import PageHeader from "../components/ui/PageHeader";
 import ProductFormModal from "../components/products/ProductFormModal";
 import {
   default as Table,
@@ -113,19 +114,19 @@ export default function ProductsPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-ink-900">Products</h1>
-          <p className="text-sm text-ink-500">
-            {currentBusiness
-              ? `${currentBusiness.name} · ${currentBusiness.business_type}`
-              : "Manage your inventory"}
-          </p>
-        </div>
-        <Button leftIcon={<Plus className="h-4 w-4" />} onClick={openCreateModal}>
-          Add Product
-        </Button>
-      </div>
+      <PageHeader
+        title="Products"
+        description={
+          currentBusiness
+            ? `${currentBusiness.name} · ${currentBusiness.business_type} · ${products.length} product${products.length === 1 ? "" : "s"}`
+            : "Manage your inventory"
+        }
+        actions={
+          <Button leftIcon={<Plus className="h-4 w-4" />} onClick={openCreateModal}>
+            Add Product
+          </Button>
+        }
+      />
 
       {successMessage && (
         <div className="flex items-center justify-between rounded-lg bg-success-50 px-4 py-3 text-sm text-success-700">
@@ -206,13 +207,13 @@ export default function ProductsPage() {
                   <TableRow key={product.id}>
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-ink-100 text-ink-400">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
                           <Package className="h-4 w-4" />
                         </span>
-                        <div>
-                          <p className="font-medium text-ink-800">{product.name}</p>
+                        <div className="min-w-0">
+                          <p className="truncate font-medium text-ink-800">{product.name}</p>
                           {product.brand && (
-                            <p className="text-xs text-ink-400">{product.brand}</p>
+                            <p className="truncate text-xs text-ink-400">{product.brand}</p>
                           )}
                         </div>
                       </div>

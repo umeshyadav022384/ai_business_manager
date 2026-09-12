@@ -1,8 +1,7 @@
 @import "tailwindcss";
 
 @theme {
-  /* Brand — a restrained blue, used sparingly for primary actions and
-     active nav state, not splashed across the whole UI. */
+  /* Brand — primary blue, used for primary actions, links, focus rings */
   --color-brand-50: #eff6ff;
   --color-brand-100: #dbeafe;
   --color-brand-200: #bfdbfe;
@@ -10,7 +9,31 @@
   --color-brand-600: #2563eb;
   --color-brand-700: #1d4ed8;
 
-  /* Neutrals — the workhorse of the UI (text, borders, backgrounds) */
+  /* Accent — secondary violet/indigo, used sparingly (one metric icon,
+     auth-page highlights) — never competes with brand blue as the
+     primary action color */
+  --color-accent-100: #ede9fe;
+  --color-accent-400: #a78bfa;
+  --color-accent-500: #8b5cf6;
+  --color-accent-600: #7c3aed;
+
+  /* Navy — the sidebar's dark anchor. Distinct scale from "ink" (which
+     stays the light-mode text/border scale) so the two never get
+     confused when reading component code. */
+  --color-navy-950: #0b1120;
+  --color-navy-900: #0f172a;
+  --color-navy-800: #182338;
+  --color-navy-700: #26344c;
+  --color-navy-600: #3a4a66;
+  --color-navy-400: #7889a3;
+  --color-navy-300: #a2b0c4;
+
+  /* Canvas — the app's main background. Deliberately a step darker
+     than "ink-50" so white cards/sidebar-content visibly separate
+     from it instead of blending into one flat white plane. */
+  --color-canvas: #eef1f6;
+
+  /* Neutrals — text, borders, light surfaces */
   --color-ink-50: #f8fafc;
   --color-ink-100: #f1f5f9;
   --color-ink-200: #e2e8f0;
@@ -22,7 +45,7 @@
   --color-ink-800: #1e293b;
   --color-ink-900: #0f172a;
 
-  /* Status colors — reserved for badges, alerts, stock states */
+  /* Status colors — badges, alerts, stock states */
   --color-success-50: #f0fdf4;
   --color-success-500: #22c55e;
   --color-success-600: #16a34a;
@@ -42,11 +65,12 @@
 
   --shadow-card: 0 1px 2px 0 rgb(15 23 42 / 0.05), 0 1px 3px 0 rgb(15 23 42 / 0.06);
   --shadow-elevated: 0 4px 6px -1px rgb(15 23 42 / 0.08), 0 2px 4px -2px rgb(15 23 42 / 0.06);
+  --shadow-navy: 4px 0 24px -8px rgb(15 23 42 / 0.25);
 }
 
 @layer base {
   body {
-    @apply bg-ink-50 text-ink-800 antialiased;
+    @apply bg-canvas text-ink-800 antialiased;
     font-family: var(--font-sans);
   }
 }
