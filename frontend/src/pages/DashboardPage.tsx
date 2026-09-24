@@ -33,6 +33,14 @@ import Loading from "../components/ui/Loading";
 import EmptyState from "../components/ui/EmptyState";
 import Button from "../components/ui/Button";
 import MetricCard from "../components/ui/MetricCard";
+import { listExpenses } from "../api/expenses";
+import type { ExpenseDto } from "../api/expenses";
+import AIInsightsCard from "../components/dashboard/AIInsightsCard";
+import SalesPurchaseTrendChart from "../components/dashboard/SalesPurchaseTrendChart";
+import TopProductsChart from "../components/dashboard/TopProductsChart";
+import RevenueExpenseProfitChart from "../components/dashboard/RevenueExpenseProfitChart";
+import ExpenseBreakdownChart from "../components/dashboard/ExpenseBreakdownChart";
+import UdhaarPayablesChart from "../components/dashboard/UdhaarPayablesChart";
 
 function isSameUtcDay(a: Date, b: Date): boolean {
   return (
@@ -49,6 +57,7 @@ export default function DashboardPage() {
   const [products, setProducts] = useState<ProductDto[]>([]);
   const [sales, setSales] = useState<SaleDto[]>([]);
   const [purchases, setPurchases] = useState<PurchaseDto[]>([]);
+  const [expenses, setExpenses] = useState<ExpenseDto[]>([]);
 
   // Phase 6 financial summary
   const [summary, setSummary] = useState<FinancialSummaryDto | null>(null);
@@ -64,7 +73,7 @@ export default function DashboardPage() {
       // Use today's date for the Phase 6 financial summary.
       const todayIso = new Date().toISOString().slice(0, 10);
 
-      const [productData, saleData, purchaseData, summaryData] =
+      const [productData, saleData, purchaseData, summaryData, expenseData] =
         await Promise.all([
           listProducts(),
           listSales(),
@@ -73,12 +82,14 @@ export default function DashboardPage() {
           // If the financial-summary endpoint fails, the rest of
           // the dashboard should still load normally.
           getFinancialSummary(todayIso, todayIso).catch(() => null),
+          listExpenses(),
         ]);
 
       setProducts(productData);
       setSales(saleData);
       setPurchases(purchaseData);
       setSummary(summaryData);
+      setExpenses(expenseData);
     } catch {
       setError("Could not load your dashboard data.");
     } finally {
@@ -256,6 +267,8 @@ export default function DashboardPage() {
             />
           </div>
 
+          <AIInsightsCard />
+
           {/* =====================================================
               SALES OVERVIEW + QUICK ACTIONS
               ===================================================== */}
@@ -331,6 +344,22 @@ export default function DashboardPage() {
                 </Link>
               </CardBody>
             </Card>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <SalesPurchaseTrendChart sales={sales} purchases={purchases} />
+            <TopProductsChart sales={sales} />
+          </div>
+
+          <RevenueExpenseProfitChart sales={sales} expenses={expenses} />
+
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <ExpenseBreakdownChart expenses={expenses} />
+            <UdhaarPayablesChart
+              customerUdhaar={summary ? Number(summary.customer_udhaar) : 0}
+              supplierPayables={summary ? Number(summary.supplier_payables) : 0}
+              currencyCode={currencyCode}
+            />
           </div>
 
           {/* =====================================================

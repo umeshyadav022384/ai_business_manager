@@ -19,12 +19,18 @@ from app.schemas.auth import (
     RegisterRequest,
     RegisterResponse,
     TokenResponse,
+    ChangePasswordRequest,
+    UserResponse,
+    UserUpdate,
 )
 from app.services.auth_service import (
     EmailAlreadyRegisteredError,
     InvalidCredentialsError,
     authenticate_user,
     register_user_with_business,
+    InvalidCurrentPasswordError,
+    change_password,
+    update_user_profile,
 )
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
@@ -93,3 +99,28 @@ def get_me(current_user: User = Depends(get_current_user), db: Session = Depends
             MembershipResponse(business=m.business, role=m.role) for m in memberships
         ],
     )
+
+@router.put("/me", response_model=UserResponse)
+def update_me(
+    payload: UserUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    return update_user_profile(db, user=current_user, payload=payload)
+
+
+@router.post("/change-password", status_code=status.HTTP_204_NO_CONTENT)
+def change_my_password(
+    payload: ChangePasswordRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        change_password(
+            db,
+            user=current_user,
+            current_password=payload.current_password,
+            new_password=payload.new_password,
+        )
+    except InvalidCurrentPasswordError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Current password is incorrect")

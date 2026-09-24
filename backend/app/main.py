@@ -11,10 +11,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.routers import (
+    ai_assistant,
     auth,
     business,
     customer,
     expense,
+    insight,
     health,
     product,
     purchase,
@@ -49,7 +51,8 @@ app.include_router(sale.router)
 app.include_router(expense.router)
 app.include_router(expense.categories_router)
 app.include_router(report.router)
-
+app.include_router(insight.router)
+app.include_router(ai_assistant.router)
 
 @app.get("/")
 def root():

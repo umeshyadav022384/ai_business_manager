@@ -17,6 +17,10 @@ import CustomerDetailPage from "./pages/CustomerDetailPage";
 import SupplierPayablesPage from "./pages/SupplierPayablesPage";
 import SupplierDetailPage from "./pages/SupplierDetailPage";
 import ReportsPage from "./pages/ReportsPage";
+import SettingsPage from "./pages/SettingsPage";
+import AIAssistantPage from "./pages/AIAssistantPage";
+
+
 /**
  * Phase 5 adds /sales and /customers (protected, inside AppLayout).
  * /login, /register, /health stay as they were.
@@ -45,10 +49,18 @@ function App() {
             <Route path="/customers" element={<CustomersPage />} />
             <Route path="/expenses" element={<ExpensesPage />} />
             <Route path="/reports" element={<ReportsPage />} />
-            <Route path="/customer-udhaar/:id" element={<CustomerDetailPage />} />
+            <Route
+              path="/customer-udhaar/:id"
+              element={<CustomerDetailPage />}
+            />
             <Route path="/suppliers/:id" element={<SupplierDetailPage />} />
             <Route path="/customer-udhaar" element={<CustomerUdhaarPage />} />
-            <Route path="/supplier-payables" element={<SupplierPayablesPage />} />
+            <Route
+              path="/supplier-payables"
+              element={<SupplierPayablesPage />}
+            />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/ai-assistant" element={<AIAssistantPage />} />
           </Route>
         </Routes>
       </AuthProvider>

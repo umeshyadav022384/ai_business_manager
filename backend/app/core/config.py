@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     secret_key: str = "change_me_in_phase_2"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    gemini_api_key: str = ""
+    chroma_persist_directory: str = "./chroma_data"
 
 
 settings = Settings()

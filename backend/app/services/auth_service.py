@@ -13,6 +13,7 @@ from app.core.security import hash_password, verify_password
 from app.models.business import Business
 from app.models.business_member import BusinessMember, BusinessRole
 from app.models.user import User
+from app.schemas.auth import UserUpdate
 
 
 class EmailAlreadyRegisteredError(Exception):
@@ -20,6 +21,9 @@ class EmailAlreadyRegisteredError(Exception):
 
 
 class InvalidCredentialsError(Exception):
+    pass
+
+class InvalidCurrentPasswordError(Exception):
     pass
 
 
@@ -96,3 +100,20 @@ def authenticate_user(db: Session, *, email: str, password: str) -> User:
 
 def get_user_by_id(db: Session, user_id: uuid.UUID) -> User | None:
     return db.query(User).filter(User.id == user_id).first()
+
+
+def update_user_profile(db: Session, *, user: User, payload: "UserUpdate") -> User:
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(user, field, value)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+def change_password(
+    db: Session, *, user: User, current_password: str, new_password: str
+) -> None:
+    if not verify_password(current_password, user.hashed_password):
+        raise InvalidCurrentPasswordError("Current password is incorrect")
+    user.hashed_password = hash_password(new_password)
+    db.commit()

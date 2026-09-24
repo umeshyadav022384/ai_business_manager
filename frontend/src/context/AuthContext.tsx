@@ -25,6 +25,8 @@ interface AuthContextValue {
   login: (email: string, password: string) => Promise<void>;
   register: (payload: RegisterPayload) => Promise<void>;
   logout: () => void;
+  refreshUser: () => Promise<void>;
+
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -67,6 +69,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  async function refreshUser() {
+    await loadCurrentUser();
+  }
   async function login(email: string, password: string) {
     const result = await loginRequest(email, password);
     localStorage.setItem(TOKEN_STORAGE_KEY, result.access_token);
@@ -97,6 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     login,
     register,
     logout,
+    refreshUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
